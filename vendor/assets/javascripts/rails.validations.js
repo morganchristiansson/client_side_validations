@@ -101,7 +101,7 @@
 
         // Because 'length' is defined on the list of validators we cannot call jQuery.each on
         for (kind in ClientSideValidations.validators.local) {
-          if (validators[kind] && (message = ClientSideValidations.validators.all()[kind](element, validators[kind]))) {
+          if (validators[kind] && (message = ClientSideValidations.validators.local[kind](element, validators[kind]))) {
             element.trigger('element:validate:fail', message).data('valid', false);
             valid = false;
             break;
@@ -110,7 +110,7 @@
 
         if (valid) {
           for (kind in ClientSideValidations.validators.remote) {
-            if (validators[kind] && (message = ClientSideValidations.validators.all()[kind](element, validators[kind]))) {
+            if (validators[kind] && (message = ClientSideValidations.validators.remote[kind](element, validators[kind]))) {
               element.trigger('element:validate:fail', message).data('valid', false);
               valid = false;
               break;
@@ -134,7 +134,6 @@
 var ClientSideValidations = {
   forms: {},
   validators: {
-    all: function() { return jQuery.extend({}, ClientSideValidations.validators.local, ClientSideValidations.validators.remote); },
     local: {
       presence: function (element, options) {
         if (/^\s*$/.test(element.val() || "")) {
