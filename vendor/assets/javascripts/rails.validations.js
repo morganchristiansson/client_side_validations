@@ -97,23 +97,27 @@
 
       if (element.data('changed') !== false) {
         var valid = true;
+        var active_callbacks = 0;
+        var callback = function(message) {
+          active_callbacks--;
+          element.trigger('element:validate:fail', message).data('valid', false);
+          valid = false;
+        };
         element.data('changed', false);
 
         // Because 'length' is defined on the list of validators we cannot call jQuery.each on
         for (kind in ClientSideValidations.validators.local) {
-          if (validators[kind] && (message = ClientSideValidations.validators.all()[kind](element, validators[kind]))) {
-            element.trigger('element:validate:fail', message).data('valid', false);
-            valid = false;
-            break;
+          if (valid && validators[kind]) {
+            active_callbacks++;
+            ClientSideValidations.validators.all()[kind](callback, element, validators[kind]);
           }
         }
 
         if (valid) {
           for (kind in ClientSideValidations.validators.remote) {
-            if (validators[kind] && (message = ClientSideValidations.validators.all()[kind](element, validators[kind]))) {
-              element.trigger('element:validate:fail', message).data('valid', false);
-              valid = false;
-              break;
+            if (valid && validators[kind]) {
+              active_callbacks++;
+              ClientSideValidations.validators.all()[kind](callback, element, validators[kind])
             }
           }
         }
@@ -130,51 +134,57 @@
   // must be invoked on that form
   $(function () { $('form[data-validate]').validate(); });
 })(jQuery);
-
+var _presence = function(element, options) {
+  if (/^\s*$/.test(element.val() || "")) {
+    return options.message;
+  }
+}
 var ClientSideValidations = {
   forms: {},
   validators: {
     all: function() { return jQuery.extend({}, ClientSideValidations.validators.local, ClientSideValidations.validators.remote); },
     local: {
-      presence: function (element, options) {
+      presence: function (callback, element, options) {
         if (/^\s*$/.test(element.val() || "")) {
-          return options.message;
+          return callback(options.message);
         }
       },
-      acceptance: function (element, options) {
+      acceptance: function (callback, element, options) {
         switch (element.attr('type')) {
           case 'checkbox':
             if (!element.attr('checked')) {
-              return options.message;
+              return callback(options.message);
             }
+            callback();
             break;
           case 'text':
             if (element.val() != (options.accept || '1')) {
-              return options.message;
+              return callback(options.message);
             }
+            callback();
             break;
         }
       },
-      format: function (element, options) {
-        if ((message = this.presence(element, options)) && options.allow_blank === true) {
-          return;
+      format: function (callback, element, options) {
+        if ((message = _presence(element, options)) && options.allow_blank === true) {
+          return callback();
         } else if (message) {
-          return message;
+          return callback(message);
         } else {
           if (options['with'] && !options['with'].test(element.val())) {
-            return options.message;
+            return callback(options.message);
           } else if (options['without'] && options['without'].test(element.val())) {
-            return options.message;
+            return callback(options.message);
           }
         }
       },
-      numericality: function (element, options) {
+      numericality: function (callback, element, options) {
         if (!/^-?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d*)?$/.test(element.val())) {
-          return options.messages.numericality;
+          return callback(options.messages.numericality);
         }
 
         if (options.only_integer && !/^[+-]?\d+$/.test(element.val())) {
-          return options.messages.only_integer;
+          return callback(options.messages.only_integer);
         }
 
         var CHECKS = { greater_than: '>', greater_than_or_equal_to: '>=',
@@ -182,19 +192,20 @@ var ClientSideValidations = {
 
         for (check in CHECKS) {
           if (options[check] !== undefined && !(new Function("return " + element.val() + CHECKS[check] + options[check])())) {
-            return options.messages[check];
+            return callback(options.messages[check]);
           }
         }
 
         if (options.odd && !(parseInt(element.val(), 10) % 2)) {
-          return options.messages.odd;
+          return callback(options.messages.odd);
         }
 
         if (options.even && (parseInt(element.val(), 10) % 2)) {
-          return options.messages.even;
+          return callback(options.messages.even);
         }
+        return callback();
       },
-      length: function (element, options) {
+      length: function (callback, element, options) {
         var blankOptions = {},
             CHECKS = { is: '==', minimum: '>=', maximum: '<=' },
             tokenizer = options.js_tokenizer || "split('')",
@@ -204,78 +215,78 @@ var ClientSideValidations = {
         } else if (options.minimum) {
           blankOptions.message = options.messages.minimum;
         }
-        if ((message = this.presence(element, blankOptions)) && options.allow_blank === true) {
-          return;
+        if ((message = _presence(element, blankOptions)) && options.allow_blank === true) {
+          return callback();
         } else if (message) {
-          return message;
+          return callback(message);
         } else {
           for (check in CHECKS) {
             if (options[check] && !(new Function("return " + tokenized_length + CHECKS[check] + options[check])())) {
-              return options.messages[check];
+              return callback(options.messages[check]);
             }
           }
         }
       },
-      exclusion: function (element, options) {
+      exclusion: function (callback, element, options) {
         var lower = null, upper = null;
-        if ((message = this.presence(element, options)) && options.allow_blank === true) {
-          return;
+        if ((message = _presence(element, options)) && options.allow_blank === true) {
+          return callback();
         } else if (message) {
-          return message;
+          return callback(message);
         } else {
           if (options['in']) {
             for (i = 0; i < options['in'].length; i = i + 1) {
               if (options['in'][i] == element.val()) {
-                return options.message;
+                return callback(options.message);
               }
             }
           } else if (options.range) {
             lower = options.range[0];
             upper = options.range[1];
             if (element.val() >= lower && element.val() <= upper) {
-              return options.message;
+              return callback(options.message);
             }
           }
         }
       },
-      inclusion: function (element, options) {
+      inclusion: function (callback, element, options) {
         var lower = null, upper = null;
-        if ((message = this.presence(element, options)) && options.allow_blank === true) {
-          return;
+        if ((message = _presence(element, options)) && options.allow_blank === true) {
+          return callback();
         } else if (message) {
-          return message;
+          return callback(message);
         } else {
           if (options['in']) {
             for (i = 0; i < options['in'].length; i = i + 1) {
               if (options['in'][i] == element.val()) {
-                return;
+                return callback();
               }
             }
-            return options.message;
+            return callback(options.message);
           } else if (options.range) {
             lower = options.range[0];
             upper = options.range[1];
 
             if (element.val() >= lower && element.val() <= upper) {
-              return;
+              return callback();
             } else {
-              return options.message;
+              return callback(options.message);
             }
           }
         }
       },
-      confirmation: function (element, options) {
+      confirmation: function (callback, element, options) {
         if (element.val() !== jQuery('#' + element.attr('id') + '_confirmation').val()) {
-          return options.message;
+          return callback(options.message);
         }
       }
     },
     remote: {
-      uniqueness: function (element, options) {
+      uniqueness: function (callback, element, options) {
         if ((message = ClientSideValidations.validators.local.presence(element, options)) && options.allow_blank === true) {
-          return;
+          return callback();
         } else if (message) {
-          return message;
+          return callback(message);
         } else {
           var data = {},
               name = null;
@@ -319,7 +330,7 @@ var ClientSideValidations = {
             data: data,
             async: false
           }).status === 200) {
-            return options.message;
+            return callback(options.message);
           }
         }
       }

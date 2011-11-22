@@ -4,37 +4,69 @@ test('when value is a number', function() {
   var element = $('<input type="text" />');
   var options = { message: "failed validation" };
   element.val('123');
-  equal(ClientSideValidations.validators.local.numericality(element, options), undefined);
+  var called=false;
+  var callback = function(result) {
+    equal(result, undefined);
+    called=true;
+  };
+  ClientSideValidations.validators.local.numericality(callback, element, options);
+  equal(called, true)
 });
 
 test('when value is a decimal number', function() {
   var element = $('<input type="text" />');
   var options = { message: "failed validation" };
   element.val('123.456');
-  equal(ClientSideValidations.validators.local.numericality(element, options), undefined);
+  var called=false;
+  var callback = function(result) {
+    equal(result, undefined);
+    called=true;
+  };
+  ClientSideValidations.validators.local.numericality(callback, element, options);
+  ok(called);
 });
 
 test('when value is not a number', function() {
   var element = $('<input type="text" />');
   var options = { messages: { numericality: "failed validation" } };
   element.val('abc123');
-  equal(ClientSideValidations.validators.local.numericality(element, options), "failed validation");
+  var called=false;
+  var callback = function(result) {
+    equal(result, "failed validation");
+    called=true;
+  };
+  ClientSideValidations.validators.local.numericality(callback, element, options);
+  ok(called);
 });
 
 test('when only allowing integers and value is integer', function() {
   var element = $('<input type="text" />');
   var options = { messages: { only_integer: "failed validation" }, only_integer: true };
   element.val('123');
-  equal(ClientSideValidations.validators.local.numericality(element, options), undefined);
+  var called=false;
+  var callback = function(result) {
+    equal(result, undefined);
+    called=true;
+  }
+  ClientSideValidations.validators.local.numericality(callback, element, options);
+  ok(called);
 });
 
 test('when only allowing integers and value has a negative or positive sign', function() {
   var element = $('<input type="text" />');
   var options = { messages: { only_integer: "failed validation"}, only_integer: true };
   element.val('-23');
-  equal(ClientSideValidations.validators.local.numericality(element, options), undefined);
+  var called=false;
+  var callback = function(result) {
+    equal(result, undefined);
+    called=true;
+  }
+  ClientSideValidations.validators.local.numericality(callback, element, options);
+  ok(called);
+  called = false;
   element.val('+23');
-  equal(ClientSideValidations.validators.local.numericality(element, options), undefined);
+  ClientSideValidations.validators.local.numericality(callback, element, options);
+  ok(called);
 });
 
 test('when only allowing integers and value is not integer', function() {
