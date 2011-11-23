@@ -35,35 +35,60 @@ test('when matching uniqueness on a non-nested resource', function() {
   var element = $('<input type="text" name="user[email]"/>');
   var options = { 'message': "failed validation" };
   element.val('nottaken@test.com');
-  equal(ClientSideValidations.validators.remote.uniqueness(element, options), undefined);
+  var callback=function(message) {
+    start();
+    equal(message, undefined);
+  };
+  ClientSideValidations.validators.remote.uniqueness(element, options, callback);
+  stop();
 });
 
 test('when matching uniqueness on a non-nested resource', function() {
   var element = $('<input type="text" name="user[email]"/>');
   var options = { 'message': "failed validation" };
   element.val('taken@test.com');
-  equal(ClientSideValidations.validators.remote.uniqueness(element, options), "failed validation");
+  var callback=function(message) {
+    start();
+    equal(message, "failed validation");
+  }
+  ClientSideValidations.validators.remote.uniqueness(element, options, callback);
+  stop();
 });
 
 test('when matching uniqueness on a nested singular resource', function() {
   var element = $('<input type="text" name="profile[user_attributes][email]"/>');
   var options = { 'message': "failed validation" };
   element.val('nottaken@test.com');
-  equal(ClientSideValidations.validators.remote.uniqueness(element, options), undefined);
+  var callback=function(message) {
+    start();
+    equal(message, undefined);
+  }
+  ClientSideValidations.validators.remote.uniqueness(element, options, callback);
+  stop();
 });
 
 test('when matching uniqueness on a nested singular resource', function() {
   var element = $('<input type="text" name="profile[user_attributes][email]"/>');
   var options = { 'message': "failed validation" };
   element.val('taken@test.com');
-  equal(ClientSideValidations.validators.remote.uniqueness(element, options), "failed validation");
+  var callback=function(message) {
+    start();
+    equal(message, "failed validation");
+  }
+  ClientSideValidations.validators.remote.uniqueness(element, options, callback);
+  stop();
 });
 
 test('when using scopes with no replacement', function() {
   var element = $('<input type="text" name="person[age]" />');
   var options = { 'message': "failed validation", 'with': /\d+/, 'scope': { 'name': 'test name' } };
   element.val('test');
-  equal(ClientSideValidations.validators.remote.uniqueness(element, options), "failed validation");
+  var callback = function(message) {
+    start();
+    equal(message, "failed validation");
+  };
+  ClientSideValidations.validators.remote.uniqueness(element, options, callback);
+  stop();
 });
 
 test('when using scopes with replacement', function() {
@@ -71,37 +96,70 @@ test('when using scopes with replacement', function() {
   var options = { 'message': "failed validation", 'with': /\d+/, 'scope': { 'name': 'test name' } };
   element.val('test')
   $('#qunit-fixture').append('<input type="text" name="person[name]" />').find('input[name="person[name]"]').val('other name');
-  equal(ClientSideValidations.validators.remote.uniqueness(element, options), undefined);
+  var callback = function(message) {
+    start();
+    equal(message, undefined);
+  };
+  ClientSideValidations.validators.remote.uniqueness(element, options, callback);
+  stop();
 });
 
 test('when validating by scope and mixed focus order', function() {
-  var unique_element = $('#user_email'), scope_element = $('#user_name');
+  window._callback = function() {
+    start();
+    delete window._callback;
+    equal($('.message[for="user_email"]').text(), '');
+
+    window._callback = function() {
+      start();
+      delete window._callback;
+      equal($('.message[for="user_email"]').text(), 'must be unique');
+    };
+    setTimeout(function() {
+      var scope_element = $('#user_name');
+      scope_element.val('test name');
+      scope_element.trigger('change');
+      scope_element.trigger('focusout');
+      stop();
+    }, 0);
+  };
+  var unique_element = $('#user_email');
   unique_element.val('free@test.com');
   unique_element.trigger('change');
   unique_element.trigger('focusout');
-  equal($('.message[for="user_email"]').text(), '');
-
-  scope_element.val('test name');
-  scope_element.trigger('change');
-  scope_element.trigger('focusout');
-  equal($('.message[for="user_email"]').text(), 'must be unique');
+  stop();
 });
 
 test('when matching uniqueness on a resource with a defined class name', function() {
   var element = $('<input type="text" name="user2[email]"/>');
   var options = { 'message': "failed validation", 'class': "active_record_test_module/user2" };
   element.val('nottaken@test.com');
-  equal(ClientSideValidations.validators.remote.uniqueness(element, options), 'failed validation');
+  var callback = function(message) {
+    start();
+    equal(message, 'failed validation');
+  };
+  ClientSideValidations.validators.remote.uniqueness(element, options, callback);
+  stop();
 });
 
 test('when allowing blank', function() {
  var element = $('<input type="text" name="user2[email]" />');
  var options = { 'message': "failed validation", 'with': /\d+/, 'allow_blank': true };
- equal(ClientSideValidations.validators.remote.uniqueness(element, options), undefined);
+ var callback = function(message) {
+  start();
+  equal(message, undefined);
+ };
+ ClientSideValidations.validators.remote.uniqueness(element, options, callback);
 });
 
 test('when not allowing blank', function() {
  var element = $('<input type="text" name="user2[email]" />');
  var options = { 'message': "failed validation", 'with': /\d+/ };
- equal(ClientSideValidations.validators.remote.uniqueness(element, options), "failed validation");
+ var callback = function(message) {
+   start();
+   equal(message, "failed validation");
+ };
+ ClientSideValidations.validators.remote.uniqueness(element, options, callback)
+ stop();
 });
+

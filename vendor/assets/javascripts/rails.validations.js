@@ -109,12 +109,21 @@
         }
 
         if (valid) {
-          for (kind in ClientSideValidations.validators.remote) {
-            if (validators[kind] && (message = ClientSideValidations.validators.remote[kind](element, validators[kind]))) {
-              element.trigger('element:validate:fail', message).data('valid', false);
-              valid = false;
-              break;
-            }
+          //for (kind in ClientSideValidations.validators.remote) {
+          var kind = "uniqueness";
+          if (validators[kind]) {
+            var callback = function(message) {
+              if (message) {
+                element.trigger('element:validate:fail', message).data('valid', false);
+                valid = false;
+              } else { //valid
+                element.data('valid', null); element.trigger('element:validate:pass');
+              }
+              element.trigger('element:validate:after');
+              if(window._callback) window._callback();
+            };
+            ClientSideValidations.validators.remote[kind](element, validators[kind], callback);
+            return false;
           }
         }
 
@@ -270,11 +279,11 @@ var ClientSideValidations = {
       }
     },
     remote: {
-      uniqueness: function (element, options) {
+      uniqueness: function (element, options, callback) {
         if ((message = ClientSideValidations.validators.local.presence(element, options)) && options.allow_blank === true) {
-          return;
+          callback();
         } else if (message) {
-          return message;
+          callback(message);
         } else {
           var data = {},
               name = null;
@@ -318,7 +327,9 @@ var ClientSideValidations = {
             data: data,
             async: false
           }).status === 200) {
-            return options.message;
+            callback(options.message);
+          } else {
+            callback();
           }
         }
       }
